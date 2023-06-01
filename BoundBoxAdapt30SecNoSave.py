@@ -140,7 +140,7 @@ rx = range(len(redChannels))
 gx = range(len(greenChannels))
 bx = range(len(blueChannels))
 
-fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(15, 10))
+fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(15, 8))
 
 ax[0].plot(rx, redChannels, color = 'red')
 ax[0].set_ylim(min(redChannels)-10,max(redChannels)+10)
@@ -154,3 +154,30 @@ ax[2].plot(bx, blueChannels, color = 'blue')
 ax[2].set_ylim(min(blueChannels)-10,max(blueChannels)+10)
 ax[2].grid(True)
 plt.show()
+
+# Here we will store all the ROIs obtained after checking if "couples" of pixels satisfy a threshold
+# as suggested in the paper
+fingersROI = []
+
+for x in range(len(fingerTips)):
+
+    threshold = 1.9 * fingerTipsVariances[x]
+
+    # This is going to store the values of each pixel that satisfy the threshold for a given image
+    singleFingerROI = []
+    for row in range(fingerTips[x].shape[0]):
+        for column in range(fingerTips[x].shape[1]):
+            
+            diff = fingerTips[x][row,column] - fingerTips[x][row,column+1]
+            if(diff > threshold):
+                continue
+
+            singleFingerROI.append(fingerTips[x][row,column])
+            singleFingerROI.append(fingerTips[x][row,column+1])
+
+            # We move by 2 columns everytime so that we check "couples" of pixels that have not been checked before
+            column+=1
+
+    fingersROI.append(singleFingerROI)
+
+cv2.imshow(fingersROI[0])
