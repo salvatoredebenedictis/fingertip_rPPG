@@ -7,6 +7,7 @@ mp_hands = mp.solutions.hands
 cap = cv2.VideoCapture(0)  # Change the parameter to a video file path if needed
 
 imgDir = "C:\\Users\\media\\Desktop\\Uni\\Magistrale\\PrimoAnno\\SecondoSemestre\\Computer Vision\\Project\\fingertip_rPPG\\images\\"
+fingertipsDir = "C:\\Users\\media\\Desktop\\Uni\\Magistrale\\PrimoAnno\\SecondoSemestre\\Computer Vision\\Project\\fingertip_rPPG\\fingertips\\"
 
 # Initializing current time and precious time for calculating the FPS
 previousTime = 0
@@ -18,9 +19,15 @@ frame_counter = 0
 frame_no = 0
 start_time = time.time()
 
+# Since we want to have 30 frames per 10 seconds, here we define a constant to use in order to stop
+# the process as soon as we reach 30 frames depending on how long we want the video to be
+videoDuration = 10
+MAX_FRAMES = 3*videoDuration
+
 with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5) as hands:
-    while cap.isOpened():
+    while cap.isOpened() and frame_counter < MAX_FRAMES:
         ret, frame = cap.read()
+     
         if not ret:
             break
 
@@ -44,7 +51,8 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         # Clear the frame and draw the hand landmarks
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame.flags.writeable = False
-
+        tempFrame = frame.copy()
+        
         if results.multi_hand_landmarks:
             hand_landmarks = results.multi_hand_landmarks[0]
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
@@ -66,20 +74,30 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
 
             # Draw a circle at the index finger tip landmark
             cv2.circle(frame, (tip_x, tip_y), 5, (255, 0, 0), -1)
+
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= frame_interval:
+
+                # ROI = index fingertip
+                cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
+                cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
+
+                cv2.imwrite(imgDir + str(frame_counter) + ".png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                frame_counter += 1
+                start_time = time.time()
         
         rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         cv2.imshow('MediaPipe Hands', rgbFrame)
-
-        elapsed_time = time.time() - start_time
-        if elapsed_time >= frame_interval:
-            cv2.imwrite(imgDir + str(frame_counter) + ".png", rgbFrame)
-            frame_counter += 1
-            start_time = time.time()
 
         # In order to stop recording: press 'q'
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
 
 cap.release()
+
+print("=====================================================================================================================")
+print("Process Completed!\nProceeding with the estimation of the values for Blood Pressure, Oxygen Saturation and Hearth Beat!")
+print("=====================================================================================================================")
+
 cv2.destroyAllWindows()
