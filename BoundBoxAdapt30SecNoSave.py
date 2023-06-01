@@ -166,9 +166,13 @@ for x in range(len(fingerTips)):
     # This is going to store the values of each pixel that satisfy the threshold for a given image
     singleFingerROI = []
     for row in range(fingerTips[x].shape[0]):
-        for column in range(fingerTips[x].shape[1]):
-            
-            diff = fingerTips[x][row,column] - fingerTips[x][row,column+1]
+        for column in range(fingerTips[x].shape[1]-1):
+
+            mean1 = np.mean(fingerTips[x][row,column])
+            mean2 = np.mean(fingerTips[x][row,column+1])
+
+            diff = np.abs(mean1 - mean2)
+
             if(diff > threshold):
                 continue
 
@@ -180,4 +184,11 @@ for x in range(len(fingerTips)):
 
     fingersROI.append(singleFingerROI)
 
-cv2.imshow(fingersROI[0])
+
+print(fingersROI[0])
+
+fig, ax = plt.subplots(1,3, figsize=(10,5))
+
+ax[0].imshow(fingersROI[0])
+plt.show() 
+
