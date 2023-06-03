@@ -211,10 +211,18 @@ reconstructedImages = []
 
 for roi in fingersROI:
     height, width, channels = fingerTips[0].shape
+
+
+
+
     reconstructedImage = np.zeros((height, width, channels), dtype=np.uint8)
 
     for row_idx, row in enumerate(roi):
         for col_idx, (pixel1, pixel2) in enumerate(zip(row[::2], row[1::2])):
+            
+            print("row", str(row_idx))
+            print("col", str(col_idx))
+
             if col_idx * 2 < width:
                 reconstructedImage[row_idx, col_idx * 2] = pixel1
             if col_idx * 2 + 1 < width:
