@@ -131,15 +131,25 @@ for f in range(len(fingerTips)):
     variance = np.mean((avarage_RGB_values - avg)**2)
     std = np.sqrt(variance)
 
-    roi=[]
+    #ROI
+    roi_green=[]
+    roi_blue=[]
+    roi_red =[]
+
+    #ROI Extraction if less than threshold 
     for row in range(fingerTips[f].shape[0]):
         for col in range(fingerTips[f].shape[1]-1):
             pixel = fingerTips[f][row,col,:]
             next_pixel = fingerTips[f][row,col+1,:]
-            if(np.mean(np.abs(pixel-next_pixel))<= 1.9 * std):
-                roi.append(pixel[1])
-                roi.append(next_pixel[1])
-    mean_green = np.mean(roi)
+            threshold = 1.9 * std
+            if(np.mean(np.abs(pixel-next_pixel))<= threshold):
+                roi_red.append(pixel[0])
+                roi_red.append(next_pixel[0])
+                roi_green.append(pixel[1])
+                roi_green.append(next_pixel[1])
+                roi_blue.append(pixel[2])
+                roi_blue.append(next_pixel[2])         
+    mean_green = np.mean(roi_green)
     rPPG.append(mean_green)
 
 
