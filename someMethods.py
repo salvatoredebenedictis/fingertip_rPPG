@@ -72,7 +72,6 @@ def reconstructImages(startingImages, computedROIs):
     print("\n%d images reconstructed!\n" % len(reconstructedImages))
     return reconstructedImages
 
-
 # This function extract blood oxygen saturation value
 def oxygen_saturation(self,signal_blue,signal_red,times,fps):
     

@@ -206,6 +206,7 @@ print(rawrPPGSignals)
 
 # Plot the computed signals
 fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10, 7))
+
 ax.plot(range(len(rawrPPGSignals)), rawrPPGSignals, color = 'green')
 ax.set_ylim(min(rawrPPGSignals)-10,max(rawrPPGSignals)+10)
 ax.grid(True)
