@@ -1,3 +1,7 @@
+# File containing methods for computing oxygen saturation
+# and alpha function (used to "solve" some issues with the quality of an image)
+import someMethods as sm
+
 import cv2
 import mediapipe as mp
 import time
@@ -32,7 +36,8 @@ fingerTips = []
 with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5) as hands:
     while cap.isOpened() and frame_counter < MAX_FRAMES:
         ret, frame = cap.read()
-     
+        tempFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         if not ret:
             break
 
@@ -42,12 +47,11 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         previousTime = currentTime
 
         localTime = time.localtime()
-        time_str = time.strftime("%M:%S", localTime)
+        time_str = time.strftime("%H:%M:%S", localTime)
 
         # Displaying FPS on the image
-        cv2.putText(frame, str(int(fps))+" FPS: ", (10, 70), cv2.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2)
-
-        cv2.putText(frame, " Time: " + time_str, (10, 140), cv2.FONT_HERSHEY_COMPLEX, 1, (255,0,0), 2)
+        cv2.putText(frame, "FPS: " + str(int(fps)), (3, 10), cv2.FONT_HERSHEY_PLAIN, 1, (80,175,76), 1)
+        cv2.putText(frame, "Time: " + time_str, (3, 30), cv2.FONT_HERSHEY_PLAIN, 1, (34,87,255), 1)
 
         # Convert the BGR image to RGB and process it with Mediapipe
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -56,8 +60,7 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         # Clear the frame and draw the hand landmarks
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame.flags.writeable = False
-        tempFrame = frame.copy()
-        
+               
         if results.multi_hand_landmarks:
             hand_landmarks = results.multi_hand_landmarks[0]
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
@@ -85,10 +88,12 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
 
                 # ROI = index fingertip
                 cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
-                # cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
-                fingerTips.append(cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
+                fingerTips.append(cropped_frame)
 
+                # These two lines might be deleted since they were used to store images of the fingertips and the frame itself
+                # cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
                 # cv2.imwrite(imgDir + str(frame_counter) + ".png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
                 frame_counter += 1
                 start_time = time.time()
         
@@ -96,7 +101,7 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
 
         cv2.imshow('MediaPipe Hands', rgbFrame)
 
-        # In order to stop recording: press 'q'
+        # In order to stop recording press 'q' or you can just wait that 30 frames are stored
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
 
@@ -104,10 +109,19 @@ cap.release()
 cv2.destroyAllWindows()
 
 print("=====================================================================================================================")
-print("Process Completed!\nProceeding with the estimation of the values for Blood Pressure, Oxygen Saturation and Hearth Beat!")
+print("We have collected %d images of our fingertip!" % len(fingerTips))
+print("The capturing process is completed!\nProceeding with the estimation of the values for Blood Pressure, Oxygen Saturation and Hearth Beat!")
 print("=====================================================================================================================")
 
-print("We have collected %d images of our fingertip." % len(fingerTips))
+# Example of images obtained
+fig, ax = plt.subplots(1, 3, figsize=(10, 5))
+ax[0].imshow(fingerTips[0])
+ax[0].set_title("Example 1", fontsize = 10)
+ax[1].imshow(fingerTips[1])
+ax[1].set_title("Example 2", fontsize = 10)
+ax[2].imshow(fingerTips[2])
+ax[2].set_title("Example 3", fontsize = 10)
+plt.show()
 
 # The mean of each image is compute as the sum of the values of its respective RGB channels and then divide it by  3
 # The variance, instead, is computed as the average of the squared difference between each pixel’s RGB value and the overall mean RGB value
@@ -136,11 +150,12 @@ for x in range(len(fingerTips)):
     variance = np.mean((channelsMean - average_rgb) ** 2)
     fingerTipsVariances.append(np.sqrt(variance))
 
+# Plot the 3 RGB channels
 rx = range(len(redChannels))
 gx = range(len(greenChannels))
 bx = range(len(blueChannels))
 
-fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(15, 8))
+fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(12, 6))
 
 ax[0].plot(rx, redChannels, color = 'red')
 ax[0].set_ylim(min(redChannels)-10,max(redChannels)+10)
@@ -155,8 +170,8 @@ ax[2].set_ylim(min(blueChannels)-10,max(blueChannels)+10)
 ax[2].grid(True)
 plt.show()
 
-# Here we will store all the ROIs obtained after checking if "couples" of pixels satisfy a threshold
-# as suggested in the paper
+# Here we will store all the ROIs obtained after checking if "couples" of pixels 
+# satisfy a threshold as suggested in the paper
 fingersROI = []
 
 for x in range(len(fingerTips)):
@@ -165,7 +180,10 @@ for x in range(len(fingerTips)):
 
     # This is going to store the values of each pixel that satisfy the threshold for a given image
     singleFingerROI = []
+
     for row in range(fingerTips[x].shape[0]):
+        tmpRow = []
+        # We move by 2 columns everytime so that we check "couples" of pixels that have not been checked before
         for column in range(fingerTips[x].shape[1]-1):
 
             mean1 = np.mean(fingerTips[x][row,column])
@@ -176,19 +194,34 @@ for x in range(len(fingerTips)):
             if(diff > threshold):
                 continue
 
-            singleFingerROI.append(fingerTips[x][row,column])
-            singleFingerROI.append(fingerTips[x][row,column+1])
+            tmpRow.append(fingerTips[x][row,column])
+            tmpRow.append(fingerTips[x][row,column+1])
+            
+            column += 1
 
-            # We move by 2 columns everytime so that we check "couples" of pixels that have not been checked before
-            column+=1
+        singleFingerROI.append(tmpRow)
 
     fingersROI.append(singleFingerROI)
 
+print("%d ROIs computed!\nProceeding with the reconstruction of the images." % len(fingersROI))
 
-print(fingersROI[0])
+# Here we reconstruct the images starting from the pixels we stored for each ROI and
+# after that we try to plot some of them to check the results
+reconstructedImages = []
 
-fig, ax = plt.subplots(1,3, figsize=(10,5))
+for roi in fingersROI:
+    height, width, channels = fingerTips[0].shape
+    reconstructedImage = np.zeros((height, width, channels), dtype=np.uint8)
 
-ax[0].imshow(fingersROI[0])
-plt.show() 
+    for row_idx, row in enumerate(roi):
+        for col_idx, (pixel1, pixel2) in enumerate(zip(row[::2], row[1::2])):
+            if col_idx * 2 < width:
+                reconstructedImage[row_idx, col_idx * 2] = pixel1
+            if col_idx * 2 + 1 < width:
+                reconstructedImage[row_idx, col_idx * 2 + 1] = pixel2
 
+    reconstructedImages.append(reconstructedImage)
+
+print("%d images reconstructed!" % len(reconstructedImages))
+
+sm.plot_images(fingersROI[0], fingersROI[1], fingersROI[2])
