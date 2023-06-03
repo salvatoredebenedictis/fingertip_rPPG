@@ -50,8 +50,8 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         time_str = time.strftime("%H:%M:%S", localTime)
 
         # Displaying FPS on the image
-        cv2.putText(frame, "FPS: " + str(int(fps)), (3, 10), cv2.FONT_HERSHEY_PLAIN, 1, (80,175,76), 1)
-        cv2.putText(frame, "Time: " + time_str, (3, 30), cv2.FONT_HERSHEY_PLAIN, 1, (34,87,255), 1)
+        cv2.putText(frame, "FPS: " + str(int(fps)), (4, 15), cv2.FONT_HERSHEY_PLAIN, 1, (80,175,76), 1)
+        cv2.putText(frame, "Time: " + time_str, (4, 35), cv2.FONT_HERSHEY_PLAIN, 1, (34,87,255), 1)
 
         # Convert the BGR image to RGB and process it with Mediapipe
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -114,14 +114,8 @@ print("The capturing process is completed!\nProceeding with the estimation of th
 print("=====================================================================================================================")
 
 # Example of images obtained
-fig, ax = plt.subplots(1, 3, figsize=(10, 5))
-ax[0].imshow(fingerTips[0])
-ax[0].set_title("Example 1", fontsize = 10)
-ax[1].imshow(fingerTips[1])
-ax[1].set_title("Example 2", fontsize = 10)
-ax[2].imshow(fingerTips[2])
-ax[2].set_title("Example 3", fontsize = 10)
-plt.show()
+sm.plotImagesTitles(fingerTips[0], fingerTips[1], fingerTips[2], 
+                    "RGB Ex. 1","RGB Ex. 2","RGB Ex. 3")
 
 # The mean of each image is compute as the sum of the values of its respective RGB channels and then divide it by  3
 # The variance, instead, is computed as the average of the squared difference between each pixel’s RGB value and the overall mean RGB value
@@ -151,24 +145,7 @@ for x in range(len(fingerTips)):
     fingerTipsVariances.append(np.sqrt(variance))
 
 # Plot the 3 RGB channels
-rx = range(len(redChannels))
-gx = range(len(greenChannels))
-bx = range(len(blueChannels))
-
-fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(12, 6))
-
-ax[0].plot(rx, redChannels, color = 'red')
-ax[0].set_ylim(min(redChannels)-10,max(redChannels)+10)
-ax[0].grid(True)
-
-ax[1].plot(gx, greenChannels, color = 'green')
-ax[1].set_ylim(min(greenChannels)-10,max(greenChannels)+10)
-ax[1].grid(True)
-
-ax[2].plot(bx, blueChannels, color = 'blue')
-ax[2].set_ylim(min(blueChannels)-10,max(blueChannels)+10)
-ax[2].grid(True)
-plt.show()
+sm.plotRGBchannels(redChannels, greenChannels, blueChannels)
 
 # Here we will store all the ROIs obtained after checking if "couples" of pixels 
 # satisfy a threshold as suggested in the paper
@@ -186,16 +163,13 @@ for x in range(len(fingerTips)):
         # We move by 2 columns everytime so that we check "couples" of pixels that have not been checked before
         for column in range(fingerTips[x].shape[1]-1):
 
-            mean1 = np.mean(fingerTips[x][row,column])
-            mean2 = np.mean(fingerTips[x][row,column+1])
-
-            diff = np.abs(mean1 - mean2)
+            diff = np.mean(fingerTips[x][row,column] - fingerTips[x][row,column+1])
 
             if(diff > threshold):
                 continue
 
-            tmpRow.append(fingerTips[x][row,column])
-            tmpRow.append(fingerTips[x][row,column+1])
+            tmpRow.append(fingerTips[x][row, column])
+            tmpRow.append(fingerTips[x][row, column+1])
             
             column += 1
 
@@ -203,33 +177,36 @@ for x in range(len(fingerTips)):
 
     fingersROI.append(singleFingerROI)
 
-print("%d ROIs computed!\nProceeding with the reconstruction of the images." % len(fingersROI))
+print("%d Green ROIs computed!\nProceeding with the reconstruction of the images." % len(fingersROI))
 
-# Here we reconstruct the images starting from the pixels we stored for each ROI and
-# after that we try to plot some of them to check the results
-reconstructedImages = []
+# Here we reconstruct images in order to compute the rPPG signals
+reconstructedImages = sm.reconstructImages(fingerTips, fingersROI)
+sm.plotImagesTitles(reconstructedImages[0], reconstructedImages[1], reconstructedImages[2], 
+                    "ROI 1", "ROI 2", "ROI 3")
 
-for roi in fingersROI:
-    height, width, channels = fingerTips[0].shape
+# Here we split the three channels in order to have 3 different lists to use for the 3 tasks
+reconstructedImagesRed = []
+reconstructedImagesGreen = []
+reconstructedImagesBlue = []
 
+for img in reconstructedImages:
+    reconstructedImagesRed.append(img[:,:,0])
+    reconstructedImagesGreen.append(img[:,:,1])
+    reconstructedImagesBlue.append(img[:,:,2])
 
+# Computation of rPPG signals
+rawrPPGSignals = []
 
+for greenImg in reconstructedImagesGreen:
+    meanGreen = np.mean(greenImg)
+    rawrPPGSignals.append(meanGreen)
 
-    reconstructedImage = np.zeros((height, width, channels), dtype=np.uint8)
+print("We have %d rPPG signals!" % len(rawrPPGSignals))
+print(rawrPPGSignals)
 
-    for row_idx, row in enumerate(roi):
-        for col_idx, (pixel1, pixel2) in enumerate(zip(row[::2], row[1::2])):
-            
-            print("row", str(row_idx))
-            print("col", str(col_idx))
-
-            if col_idx * 2 < width:
-                reconstructedImage[row_idx, col_idx * 2] = pixel1
-            if col_idx * 2 + 1 < width:
-                reconstructedImage[row_idx, col_idx * 2 + 1] = pixel2
-
-    reconstructedImages.append(reconstructedImage)
-
-print("%d images reconstructed!" % len(reconstructedImages))
-
-sm.plot_images(fingersROI[0], fingersROI[1], fingersROI[2])
+# Plot the computed signals
+fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10, 7))
+ax.plot(range(len(rawrPPGSignals)), rawrPPGSignals, color = 'green')
+ax.set_ylim(min(rawrPPGSignals)-10,max(rawrPPGSignals)+10)
+ax.grid(True)
+plt.show()

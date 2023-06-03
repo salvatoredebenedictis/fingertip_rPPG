@@ -2,15 +2,76 @@ import numpy as np
 import scipy
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
 
-def plot_images(img1, img2, img3):
-  
-    fig, ax = plt.subplots(1, 3, figsize=(12, 7))
+def plotImagesTitles(img1, img2, img3, t1, t2, t3):
+
+    fig, ax = plt.subplots(1, 3, figsize=(10, 5))
+
     ax[0].imshow(img1)
+    ax[0].set_title(t1, fontsize = 10)
+
     ax[1].imshow(img2)
+    ax[1].set_title(t2, fontsize = 10)
+
     ax[2].imshow(img3)
+    ax[2].set_title(t3, fontsize = 10)
+
     plt.show()
+
+def plotRGBchannels(redChannel, greenChannel, blueChannel):
+
+    rx = range(len(redChannel))
+    gx = range(len(greenChannel))
+    bx = range(len(blueChannel))
+
+    fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(12, 6))
+
+    ax[0].plot(rx, redChannel, color = 'red')
+    ax[0].set_ylim(min(redChannel)-10,max(redChannel)+10)
+    ax[0].grid(True)
+
+    ax[1].plot(gx, greenChannel, color = 'green')
+    ax[1].set_ylim(min(greenChannel)-10,max(greenChannel)+10)
+    ax[1].grid(True)
+
+    ax[2].plot(bx, blueChannel, color = 'blue')
+    ax[2].set_ylim(min(blueChannel)-10,max(blueChannel)+10)
+    ax[2].grid(True)
+    plt.show()
+
+def reconstructImages(startingImages, computedROIs):
+
+    # Here we reconstruct the images starting from the pixels we stored for each ROI and
+    # after that we try to plot some of them to check the results
+    reconstructedImages = []
+
+    # Calculate maximum dimensions
+    maxH = max([frame.shape[0] for frame in startingImages])
+    maxW = max([frame.shape[1] for frame in startingImages])
+
+    for roi in computedROIs:
+
+        # this produces some errors when reconstructing images
+        # height, width, channels = fingerTips[0].shape
+        height, width, channels = maxH, maxH, startingImages[0].shape[2]
+        # height, width, channels = maxH, maxW, 3
+
+        reconstructedImage = np.zeros((height, width, channels), dtype=np.uint8)
+
+        for row_idx, row in enumerate(roi):
+            for col_idx, (pixel1, pixel2) in enumerate(zip(row[::2], row[1::2])):
+
+                if col_idx * 2 < width:
+                    reconstructedImage[row_idx, col_idx * 2] = pixel1
+
+                if col_idx * 2 + 1 < width:
+                    reconstructedImage[row_idx, col_idx * 2 + 1] = pixel2
+
+        reconstructedImages.append(reconstructedImage)
+
+    print("\n%d images reconstructed!\n" % len(reconstructedImages))
+    return reconstructedImages
+
 
 # This function extract blood oxygen saturation value
 def oxygen_saturation(self,signal_blue,signal_red,times,fps):
