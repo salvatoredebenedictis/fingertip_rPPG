@@ -257,3 +257,8 @@ ax[1].set_title("Computed Breath Signal")
 ax[1].grid(True)
 
 plt.show()
+
+'''
+print("Hearth Rate: %d" % heartRate)
+print("Breath Rate: %d" % breathRate)
+'''

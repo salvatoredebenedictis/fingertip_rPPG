@@ -40,6 +40,7 @@ def plotRGBchannels(redChannel, greenChannel, blueChannel):
     ax[2].grid(True)
     plt.show()
 
+# Reconstructs images with the computed ROIs in order to check what pixels have been stored
 def reconstructImages(startingImages, computedROIs):
 
     # Here we reconstruct the images starting from the pixels we stored for each ROI and
@@ -73,6 +74,7 @@ def reconstructImages(startingImages, computedROIs):
     print("%d images reconstructed!\n" % len(reconstructedImages))
     return reconstructedImages
 
+# Computes the mean of a list of images
 def meanComputation(imagesList):
     means = []
 
@@ -128,7 +130,7 @@ def alpha_function(red, green, blue, fps):
     #Frequency cut for the breathing signal
     br_lowcut = 0.17
     br_highcut = 0.67
-    
+
     # Frequency cut for the heart signal
     hr_lowcut = 0.6
     hr_highcut = 4.0
