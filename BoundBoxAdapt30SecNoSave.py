@@ -2,6 +2,7 @@
 # and alpha function (used to "solve" some issues with the quality of an image)
 import someMethods as sm
 
+import sys
 import cv2
 import mediapipe as mp
 import time
@@ -112,10 +113,14 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
 cap.release()
 cv2.destroyAllWindows()
 
+if frame_counter < 10:
+    print("Not enough samples have been collected.\nStopping execution.")
+    sys.exit()
+
 # We need integer values for each frame's FPS
 frameFps = [int(value) for value in frameFps]
 
-print("=====================================================================================================================")
+print("\n=====================================================================================================================")
 print("We have collected %d images of our fingertip!" % len(fingerTips))
 print("The capturing process is completed!\nProceeding with the estimation of the values for Blood Pressure, Oxygen Saturation and Hearth Beat!")
 print("=====================================================================================================================")
@@ -123,6 +128,8 @@ print("=========================================================================
 # Example of images obtained
 sm.plotImagesTitles(fingerTips[0], fingerTips[1], fingerTips[2], 
                     "RGB Ex. 1","RGB Ex. 2","RGB Ex. 3")
+
+print("First step: computation of the mean and standard deviation of each collected image.")
 
 # The mean of each image is compute as the sum of the values of its respective RGB channels and then divide it by  3
 # The variance, instead, is computed as the average of the squared difference between each pixel’s RGB value and the overall mean RGB value
@@ -152,12 +159,12 @@ for x in range(len(fingerTips)):
     fingerTipsVariances.append(np.sqrt(variance))
 
 # Plot the 3 RGB channels
-# sm.plotRGBchannels(redChannels, greenChannels, blueChannels)
+sm.plotRGBchannels(redChannels, greenChannels, blueChannels, "RGB Channels Before Being Processed")
 
-# Here we will store all the ROIs obtained after checking if "couples" of pixels 
-# satisfy a threshold as suggested in the paper
+print("The mean and standard deviation of each image have been computed!\nNext step: computation of the ROIs for each collected image.")
+
+# Here we will store all the ROIs obtained after checking if "couples" of pixels satisfy a threshold as suggested in the paper
 fingersROI = []
-
 redROIs = []
 greenROIs = []
 blueROIs = []
@@ -211,15 +218,14 @@ for x in range(len(fingerTips)):
     greenROIs.append(singleFingerROIgreen)
     blueROIs.append(singleFingerROIblue)
 
-print("\n%d Green ROIs computed!\n\nProceeding with the reconstruction of the images." % len(fingersROI))
+print("\n%d ROIs computed!\nNow we are going to check the results by reconstructing the images and plotting some of them." % len(fingersROI))
 
 # Here we reconstruct images in order to compute the rPPG signals
 reconstructedImages = sm.reconstructImages(fingerTips, fingersROI)
 sm.plotImagesTitles(reconstructedImages[0], reconstructedImages[1], reconstructedImages[2], 
                     "ROI 1", "ROI 2", "ROI 3")
 
-
-print("Next step: computation of the means of each ROI's channel.")
+print("Next step: computation of the mean of each ROI's channel.")
 
 # Here we compute the means for each ROI's channels
 meanRedROIs = sm.meanComputation(redROIs)
@@ -229,36 +235,32 @@ meanBlueROIs = sm.meanComputation(blueROIs)
 # and thats exactly what we do with the method sm.meanComputation
 rawrPPGSignals = sm.meanComputation(greenROIs)
 
-print("%d means for the red channel computed!" % len(meanRedROIs))
-print("%d means for the green channel computed (these are the raw rPPG signals)!" % len(rawrPPGSignals))
-print("%d means for the blue channel computed!" % len(meanBlueROIs))
+print("""
+    %d means for the red channel computed!
+    %d means for the green channel computed (these are the raw rPPG signals)!
+    %d means for the blue channel computed!"
+""" % (len(meanRedROIs), len(rawrPPGSignals), len(meanBlueROIs)))
+
+print("\nNow we are ready to compute the Oxygen Saturation and the signals of both Hearth Rate and Breath Rate!")
+
+# We compute the mean fps so that we can use this in the alpha function
+# we might want to have a different value for each frame but as of now it causes some issues
+meanFps = np.mean(frameFps)
+
+# Hearth Signal and Breath Signal computation
+heartRateSignal, breathSignal = sm.alpha_function(meanRedROIs, rawrPPGSignals, meanBlueROIs, meanFps)
+
+# Plot the computed signals
+sm.plotHearthBreathSignals(heartRateSignal, breathSignal)
 
 # Oxygen Saturation value computation
 oxygenSaturation = sm.oxygen_saturation(meanBlueROIs, meanRedROIs)
-print("\nOxygen Saturation of the Individual: %d\n" % oxygenSaturation)
+print("\nOxygen Saturation of the Individual: %d" % oxygenSaturation)
 
-# Hearth Signal and Breath Signal computation
-heartRateSignal, breathSignal = sm.alpha_function(meanRedROIs, rawrPPGSignals, meanBlueROIs, frameFps)
+# Hearth rate computation
+heartRate = sm.high_peak(meanFps, len(heartRateSignal), heartRateSignal, 50, 180)
+print("Hearth Rate of the Individual: %d" % heartRate)
 
-print("Hearth Rate Signal:", heartRateSignal)
-print("Breath Signal:", breathSignal)
-
-# Plot the computed signals
-fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(15, 10))
-
-ax[0].plot(range(len(heartRateSignal)), heartRateSignal, color = 'red')
-ax[0].set_ylim(min(heartRateSignal), max(heartRateSignal))
-ax[0].set_title("Computed Hearth Signal")
-ax[0].grid(True)
-
-ax[1].plot(range(len(breathSignal)), breathSignal, color = 'blue')
-ax[1].set_ylim(min(breathSignal), max(breathSignal))
-ax[1].set_title("Computed Breath Signal")
-ax[1].grid(True)
-
-plt.show()
-
-'''
-print("Hearth Rate: %d" % heartRate)
-print("Breath Rate: %d" % breathRate)
-'''
+# Breath rate computation
+breathRate = sm.high_peak(meanFps, len(breathSignal), breathSignal, 10, 40)
+print("Breath Rate of the Individual: %d" % breathRate)

@@ -1,12 +1,12 @@
 import numpy as np
 import scipy
-from sklearn import preprocessing
 from scipy.signal import firwin
 import matplotlib.pyplot as plt
 
+# Plot 3 images with different titles
 def plotImagesTitles(img1, img2, img3, t1, t2, t3):
 
-    fig, ax = plt.subplots(1, 3, figsize=(10, 5))
+    fig, ax = plt.subplots(1, 3, figsize=(8, 6))
 
     ax[0].imshow(img1)
     ax[0].set_title(t1, fontsize = 10)
@@ -19,13 +19,14 @@ def plotImagesTitles(img1, img2, img3, t1, t2, t3):
 
     plt.show()
 
-def plotRGBchannels(redChannel, greenChannel, blueChannel):
+# Plot RGB channels
+def plotRGBchannels(redChannel, greenChannel, blueChannel, title = ""):
 
     rx = range(len(redChannel))
     gx = range(len(greenChannel))
     bx = range(len(blueChannel))
 
-    fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(12, 6))
+    fig, ax = plt.subplots(nrows = 3, ncols = 1, figsize=(8, 6))
 
     ax[0].plot(rx, redChannel, color = 'red')
     ax[0].set_ylim(min(redChannel)-10,max(redChannel)+10)
@@ -38,6 +39,25 @@ def plotRGBchannels(redChannel, greenChannel, blueChannel):
     ax[2].plot(bx, blueChannel, color = 'blue')
     ax[2].set_ylim(min(blueChannel)-10,max(blueChannel)+10)
     ax[2].grid(True)
+
+    plt.suptitle(title)
+    plt.show()
+
+# Plot Heart Rate and Breath Rate Signals
+def plotHearthBreathSignals(heartSig, breathSig):
+
+    fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(9, 7))
+
+    ax[0].plot(range(len(heartSig)), heartSig, color = 'red')
+    ax[0].set_ylim(min(heartSig), max(heartSig))
+    ax[0].set_title("Computed Hearth Signal")
+    ax[0].grid(True)
+
+    ax[1].plot(range(len(breathSig)), breathSig, color = 'blue')
+    ax[1].set_ylim(min(breathSig), max(breathSig))
+    ax[1].set_title("Computed Breath Signal")
+    ax[1].grid(True)
+
     plt.show()
 
 # Reconstructs images with the computed ROIs in order to check what pixels have been stored
@@ -71,7 +91,7 @@ def reconstructImages(startingImages, computedROIs):
 
         reconstructedImages.append(reconstructedImage)
 
-    print("%d images reconstructed!\n" % len(reconstructedImages))
+    print("%d images have been reconstructed!\nPlotting three of them.\n" % len(reconstructedImages))
     return reconstructedImages
 
 # Computes the mean of a list of images
@@ -162,3 +182,25 @@ def alpha_function(red, green, blue, fps):
     #-----------------------------------------------------------------------------------------------------
 
     return signal_hr_final, signal_br_final
+
+# Computation of heart and breath rate given the signals computed with the alpha function
+def high_peak(Fs, n, component, low, high):
+    
+    raw = np.fft.rfft(component)
+    fft = np.abs(raw)
+
+    freqs = float(Fs) / n * np.arange(n / 2 + 1)
+    freqs = 60. * freqs
+    idx = np.where((freqs > low) & (freqs < high))
+
+    pruned = fft[idx]
+    pfreq = freqs[idx]
+
+    freqs = pfreq
+    fft = pruned
+
+    idx2 = np.argmax(fft)
+    bpm = freqs[idx2]
+    idx += (1,)
+
+    return bpm
