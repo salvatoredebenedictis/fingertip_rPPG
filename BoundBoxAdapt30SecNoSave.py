@@ -23,6 +23,7 @@ currentTime = 0
 frame_interval = 0.33  
 frame_counter = 0
 frame_no = 0
+frameFps = []
 start_time = time.time()
 
 # Since we want to have 30 frames per 10 seconds, here we define a constant to use in order to stop
@@ -89,6 +90,9 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
                 # ROI = index fingertip
                 cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
                 fingerTips.append(cropped_frame)
+                frameFps.append(fps)
+
+                # save Fps here for each frame ^^^^^^^^
 
                 # These two lines might be deleted since they were used to store images of the fingertips and the frame itself
                 # cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
@@ -107,6 +111,9 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
 
 cap.release()
 cv2.destroyAllWindows()
+
+# We need integer values for each frame's FPS
+frameFps = [int(value) for value in frameFps]
 
 print("=====================================================================================================================")
 print("We have collected %d images of our fingertip!" % len(fingerTips))
@@ -145,11 +152,15 @@ for x in range(len(fingerTips)):
     fingerTipsVariances.append(np.sqrt(variance))
 
 # Plot the 3 RGB channels
-sm.plotRGBchannels(redChannels, greenChannels, blueChannels)
+# sm.plotRGBchannels(redChannels, greenChannels, blueChannels)
 
 # Here we will store all the ROIs obtained after checking if "couples" of pixels 
 # satisfy a threshold as suggested in the paper
 fingersROI = []
+
+redROIs = []
+greenROIs = []
+blueROIs = []
 
 for x in range(len(fingerTips)):
 
@@ -157,9 +168,17 @@ for x in range(len(fingerTips)):
 
     # This is going to store the values of each pixel that satisfy the threshold for a given image
     singleFingerROI = []
+    singleFingerROIred = []
+    singleFingerROIgreen = []
+    singleFingerROIblue = []
 
     for row in range(fingerTips[x].shape[0]):
+
         tmpRow = []
+        redROIrow = []
+        greenROIrow = []
+        blueROIrow = []
+
         # We move by 2 columns everytime so that we check "couples" of pixels that have not been checked before
         for column in range(fingerTips[x].shape[1]-1):
 
@@ -168,46 +187,73 @@ for x in range(len(fingerTips)):
             if(diff > threshold):
                 continue
 
+            redROIrow.append(fingerTips[x][row, column, 0])
+            redROIrow.append(fingerTips[x][row, column+1, 0])
+
+            greenROIrow.append(fingerTips[x][row, column, 1])
+            greenROIrow.append(fingerTips[x][row, column+1, 1])
+
+            blueROIrow.append(fingerTips[x][row, column, 2])
+            blueROIrow.append(fingerTips[x][row, column+1, 2])
+
             tmpRow.append(fingerTips[x][row, column])
             tmpRow.append(fingerTips[x][row, column+1])
             
             column += 1
 
         singleFingerROI.append(tmpRow)
+        singleFingerROIred.append(redROIrow)
+        singleFingerROIgreen.append(greenROIrow)
+        singleFingerROIblue.append(blueROIrow)
 
     fingersROI.append(singleFingerROI)
+    redROIs.append(singleFingerROIred)
+    greenROIs.append(singleFingerROIgreen)
+    blueROIs.append(singleFingerROIblue)
 
-print("%d Green ROIs computed!\nProceeding with the reconstruction of the images." % len(fingersROI))
+print("\n%d Green ROIs computed!\n\nProceeding with the reconstruction of the images." % len(fingersROI))
 
 # Here we reconstruct images in order to compute the rPPG signals
 reconstructedImages = sm.reconstructImages(fingerTips, fingersROI)
 sm.plotImagesTitles(reconstructedImages[0], reconstructedImages[1], reconstructedImages[2], 
                     "ROI 1", "ROI 2", "ROI 3")
 
-# Here we split the three channels in order to have 3 different lists to use for the 3 tasks
-reconstructedImagesRed = []
-reconstructedImagesGreen = []
-reconstructedImagesBlue = []
 
-for img in reconstructedImages:
-    reconstructedImagesRed.append(img[:,:,0])
-    reconstructedImagesGreen.append(img[:,:,1])
-    reconstructedImagesBlue.append(img[:,:,2])
+print("Next step: computation of the means of each ROI's channel.")
 
-# Computation of rPPG signals
-rawrPPGSignals = []
+# Here we compute the means for each ROI's channels
+meanRedROIs = sm.meanComputation(redROIs)
+meanBlueROIs = sm.meanComputation(blueROIs)
 
-for greenImg in reconstructedImagesGreen:
-    meanGreen = np.mean(greenImg)
-    rawrPPGSignals.append(meanGreen)
+# We named this list rawrPPGSignals since its values, by definition, should be the mean of each greenROI
+# and thats exactly what we do with the method sm.meanComputation
+rawrPPGSignals = sm.meanComputation(greenROIs)
 
-print("We have %d rPPG signals!" % len(rawrPPGSignals))
-print(rawrPPGSignals)
+print("%d means for the red channel computed!" % len(meanRedROIs))
+print("%d means for the green channel computed (these are the raw rPPG signals)!" % len(rawrPPGSignals))
+print("%d means for the blue channel computed!" % len(meanBlueROIs))
+
+# Oxygen Saturation value computation
+oxygenSaturation = sm.oxygen_saturation(meanBlueROIs, meanRedROIs)
+print("\nOxygen Saturation of the Individual: %d\n" % oxygenSaturation)
+
+# Hearth Signal and Breath Signal computation
+heartRateSignal, breathSignal = sm.alpha_function(meanRedROIs, rawrPPGSignals, meanBlueROIs, frameFps)
+
+print("Hearth Rate Signal:", heartRateSignal)
+print("Breath Signal:", breathSignal)
 
 # Plot the computed signals
-fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10, 7))
+fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(15, 10))
 
-ax.plot(range(len(rawrPPGSignals)), rawrPPGSignals, color = 'green')
-ax.set_ylim(min(rawrPPGSignals)-10,max(rawrPPGSignals)+10)
-ax.grid(True)
+ax[0].plot(range(len(heartRateSignal)), heartRateSignal, color = 'red')
+ax[0].set_ylim(min(heartRateSignal), max(heartRateSignal))
+ax[0].set_title("Computed Hearth Signal")
+ax[0].grid(True)
+
+ax[1].plot(range(len(breathSignal)), breathSignal, color = 'blue')
+ax[1].set_ylim(min(breathSignal), max(breathSignal))
+ax[1].set_title("Computed Breath Signal")
+ax[1].grid(True)
+
 plt.show()
