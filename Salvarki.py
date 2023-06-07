@@ -4,6 +4,59 @@ import mediapipe as mp
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
+from scipy.signal import firwin
+from sklearn import preprocessing
+
+def bandpass_firwin(ntaps, lowcut, highcut, fs, window='hanning'):
+    nyq = 0.5 * fs
+    taps = firwin(ntaps, [lowcut, highcut], nyq=nyq, pass_zero=False,
+                  window=window, scale=False)
+    return taps
+
+def alpha_function(red,green,blue,fps):
+    """This function apply the chrome process on channels and return the heart and breath signals"""
+    red = np.array(red)
+    green = np.array(green)
+    blue = np.array(blue)
+
+    xS = 3*red-2*green
+    yS = 1.5*red+green-1.5*blue
+
+    fs = fps/0.5
+    ntaps = 512
+    #Frequency cut for the breathing signal
+    br_lowcut = 0.17
+    br_highcut = 0.67
+    # Frequency cut for the heart signal
+    hr_lowcut = 0.6
+    hr_highcut = 4.0
+
+    #-------------------------------- HR -----------------------------------------------------------------
+    hanning_hr_filter = bandpass_firwin(ntaps, hr_lowcut, hr_highcut, fs, window='hanning')
+    xF = scipy.signal.lfilter(hanning_hr_filter, 1, xS)
+    yF = scipy.signal.lfilter(hanning_hr_filter, 1, yS)
+    redF = scipy.signal.lfilter(hanning_hr_filter, 1, red)
+    greenF = scipy.signal.lfilter(hanning_hr_filter, 1, green)
+    blueF = scipy.signal.lfilter(hanning_hr_filter, 1, blue)
+    alpha = np.std(xF)/np.std(yF)
+    #signal_final=xF-(alpha*yF) #raggruppamento
+    signal_hr_final = 3*(1-alpha/2)*redF-2*(1+alpha/2)*greenF+3*(alpha/2)*blueF
+    #-------------------------------------------------------------------------------------------------------
+
+    #--------------------------------------BR---------------------------------------------------------------
+    hanning_br_filter = bandpass_firwin(ntaps, br_lowcut, br_highcut, fs, window='hanning')
+    xF = scipy.signal.lfilter(hanning_br_filter, 1, xS)
+    yF = scipy.signal.lfilter(hanning_br_filter, 1, yS)
+    redF = scipy.signal.lfilter(hanning_br_filter, 1, red)
+    greenF = scipy.signal.lfilter(hanning_br_filter, 1, green)
+    blueF = scipy.signal.lfilter(hanning_br_filter, 1, blue)
+    alpha = np.std(xF) / np.std(yF)
+    # signal_final=xF-(alpha*yF) raggruppamento
+    signal_br_final = 3 * (1 - alpha / 2) * redF - 2 * (1 + alpha / 2) * greenF + 3 * (alpha / 2) * blueF
+    #-----------------------------------------------------------------------------------------------------
+
+    return signal_hr_final, signal_br_final
 
 #Model mediapipe
 mp_drawing = mp.solutions.drawing_utils
@@ -84,11 +137,6 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
                 # ROI = index fingertip
                 cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
                 fingerTips.append(cropped_frame)
-
-                # These two lines might be deleted since they were used to store images of the fingertips and the frame itself
-                # cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
-                # cv2.imwrite(imgDir + str(frame_counter) + ".png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
                 frame_counter += 1
                 start_time = time.time()
         
@@ -119,6 +167,8 @@ ax[2].set_title("Example 3", fontsize = 10)
 plt.show()
 
 rPPG=[]
+rois_Blue=[]
+rois_Red =[]
 for f in range(len(fingerTips)):
     avarage_RGB_values=[]
     for row in range(fingerTips[f].shape[0]):
@@ -151,6 +201,8 @@ for f in range(len(fingerTips)):
                 roi_blue.append(next_pixel[2])         
     mean_green = np.mean(roi_green)
     rPPG.append(mean_green)
+    rois_Blue.append(np.mean(roi_blue))
+    rois_Red.append(np.mean(roi_red))
 
 
 # Plot the RPPG
@@ -162,6 +214,9 @@ ax.plot(gx, rPPG, color='green')
 ax.set_ylim(min(rPPG)-10, max(rPPG)+10)
 ax.grid(True)
 plt.show()
+
+hr,br=alpha_function(rois_Red,rPPG,rois_Blue,30)
+print(hr)
 
 """
 ##ROI EXTRACTION
@@ -186,3 +241,4 @@ for f in range(len(fingerTips)):
 
 variance = np.mean(pixel[0]- mean_pixel)
 """
+
