@@ -4,17 +4,14 @@ import someMethods as sm
 
 import sys
 import cv2
-import mediapipe as mp
 import time
 import numpy as np
+import mediapipe as mp
 import matplotlib.pyplot as plt
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
-cap = cv2.VideoCapture(0)  # Change the parameter to a video file path if needed
-
-imgDir = "C:\\Users\\media\\Desktop\\Uni\\Magistrale\\PrimoAnno\\SecondoSemestre\\Computer Vision\\Project\\fingertip_rPPG\\images\\"
-fingertipsDir = "C:\\Users\\media\\Desktop\\Uni\\Magistrale\\PrimoAnno\\SecondoSemestre\\Computer Vision\\Project\\fingertip_rPPG\\fingertips\\"
+cap = cv2.VideoCapture(0)
 
 # Initializing current time and precious time for calculating the FPS
 previousTime = 0
@@ -23,14 +20,14 @@ currentTime = 0
 # Capture a frame every 0.33 seconds (30 frames per 10 seconds)
 frame_interval = 0.33  
 frame_counter = 0
-frame_no = 0
+skipFrame = 0
 frameFps = []
 start_time = time.time()
 
 # Since we want to have 30 frames per 10 seconds, here we define a constant to use in order to stop
 # the process as soon as we reach 30 frames depending on how long we want the video to be
 videoDuration = 10
-MAX_FRAMES = 3*videoDuration
+MAX_FRAMES = 3 * videoDuration
 
 # List of fingertips images
 fingerTips = []
@@ -48,6 +45,7 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         fps = 1 / (currentTime-previousTime)
         previousTime = currentTime
 
+        # Time to be shown on the frame
         localTime = time.localtime()
         time_str = time.strftime("%H:%M:%S", localTime)
 
@@ -64,6 +62,7 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
         frame.flags.writeable = False
                
         if results.multi_hand_landmarks:
+
             hand_landmarks = results.multi_hand_landmarks[0]
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
@@ -86,21 +85,21 @@ with mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_conf
             cv2.circle(frame, (tip_x, tip_y), 5, (255, 0, 0), -1)
 
             elapsed_time = time.time() - start_time
+
             if elapsed_time >= frame_interval:
 
-                # ROI = index fingertip
-                cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
-                fingerTips.append(cropped_frame)
-                frameFps.append(fps)
+                if skipFrame == 5:
 
-                # save Fps here for each frame ^^^^^^^^
+                    cropped_frame = tempFrame[y_min:y_max, x_min:x_max]
+                    fingerTips.append(cropped_frame)
+                    frameFps.append(fps)
+                    frame_counter += 1
+                    start_time = time.time()
 
-                # These two lines might be deleted since they were used to store images of the fingertips and the frame itself
-                # cv2.imwrite(fingertipsDir + str(frame_counter) + ".png", cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
-                # cv2.imwrite(imgDir + str(frame_counter) + ".png", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                else:
 
-                frame_counter += 1
-                start_time = time.time()
+                    skipFrame += 1
+                    start_time = time.time()
         
         rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -161,7 +160,9 @@ for x in range(len(fingerTips)):
 # Plot the 3 RGB channels
 sm.plotRGBchannels(redChannels, greenChannels, blueChannels, "RGB Channels Before Being Processed")
 
-print("The mean and standard deviation of each image have been computed!\nNext step: computation of the ROIs for each collected image.")
+print("The mean and standard deviation of each image have been computed!")
+print("=====================================================================================================================")
+print("Next step: computation of the ROIs for each collected image.")
 
 # Here we will store all the ROIs obtained after checking if "couples" of pixels satisfy a threshold as suggested in the paper
 fingersROI = []
@@ -218,7 +219,9 @@ for x in range(len(fingerTips)):
     greenROIs.append(singleFingerROIgreen)
     blueROIs.append(singleFingerROIblue)
 
-print("\n%d ROIs computed!\nNow we are going to check the results by reconstructing the images and plotting some of them." % len(fingersROI))
+print("%d ROIs computed!"  % len(fingersROI))
+print("=====================================================================================================================")
+print("Now we are going to check the results by reconstructing the images and plotting some of them.")
 
 # Here we reconstruct images in order to compute the rPPG signals
 reconstructedImages = sm.reconstructImages(fingerTips, fingersROI)
@@ -241,7 +244,8 @@ print("""
     %d means for the blue channel computed!"
 """ % (len(meanRedROIs), len(rawrPPGSignals), len(meanBlueROIs)))
 
-print("\nNow we are ready to compute the Oxygen Saturation and the signals of both Hearth Rate and Breath Rate!")
+print("=====================================================================================================================")
+print("Now we are ready to compute the Oxygen Saturation and the signals of both Hearth Rate and Breath Rate!")
 
 # We compute the mean fps so that we can use this in the alpha function
 # we might want to have a different value for each frame but as of now it causes some issues
@@ -252,15 +256,16 @@ heartRateSignal, breathSignal = sm.alpha_function(meanRedROIs, rawrPPGSignals, m
 
 # Plot the computed signals
 sm.plotHearthBreathSignals(heartRateSignal, breathSignal)
-
+print("=====================================================================================================================")
 # Oxygen Saturation value computation
 oxygenSaturation = sm.oxygen_saturation(meanBlueROIs, meanRedROIs)
-print("\nOxygen Saturation of the Individual: %d" % oxygenSaturation)
+print("Oxygen Saturation of the Individual: %d" % oxygenSaturation)
 
 # Hearth rate computation
 heartRate = sm.high_peak(meanFps, len(heartRateSignal), heartRateSignal, 50, 180)
-print("Hearth Rate of the Individual: %d" % heartRate)
+print("Hearth Rate of the Individual: %d bpm" % heartRate)
 
 # Breath rate computation
 breathRate = sm.high_peak(meanFps, len(breathSignal), breathSignal, 10, 40)
 print("Breath Rate of the Individual: %d" % breathRate)
+print("=====================================================================================================================\n")

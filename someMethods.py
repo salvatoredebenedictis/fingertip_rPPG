@@ -91,7 +91,9 @@ def reconstructImages(startingImages, computedROIs):
 
         reconstructedImages.append(reconstructedImage)
 
-    print("%d images have been reconstructed!\nPlotting three of them.\n" % len(reconstructedImages))
+    print("%d images have been reconstructed!\nPlotting three of them." % len(reconstructedImages))
+    print("=====================================================================================================================")
+    
     return reconstructedImages
 
 # Computes the mean of a list of images
@@ -144,7 +146,7 @@ def alpha_function(red, green, blue, fps):
     xS = 3*red-2*green
     yS = 1.5*red+green-1.5*blue
 
-    fs = fps/0.5
+    fs = fps/0.33
     ntaps = 512
 
     #Frequency cut for the breathing signal
