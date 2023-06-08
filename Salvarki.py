@@ -271,11 +271,11 @@ ax[2].imshow(fingerTips[2])
 ax[2].set_title("Example 3", fontsize = 10)
 plt.show()
 
+#ROI Extraction--------------------------------------------------------------------------
 rois_Green=[]
 rois_Blue=[]
 rois_Red =[]
 
-#ROI Extraction--------------------------------------------------------------------------
 roi_extraction(fingerTips, rois_Green, rois_Blue, rois_Red)
 plot_rois(rois_Green, rois_Blue, rois_Red)
 
@@ -283,14 +283,17 @@ plot_rois(rois_Green, rois_Blue, rois_Red)
 hr=alpha_function_hr(rois_Red,rois_Green,rois_Blue,np.mean(frameFps))
 br=alpha_function_br(rois_Red,rois_Green,rois_Blue,np.mean(frameFps)) 
 spo2 = oxygen_saturation(rois_Blue,rois_Red)
-print("SpO2:",int(spo2),"%")
 
+
+#plot of hr signal
 fig, ax = plt.subplots(figsize=(15, 6))
 ax.plot(range(len(hr)), hr, color='red')
 ax.set_ylim(min(hr), max(hr))
 ax.grid(True)
 plt.show()
 
+#print the results
+print("SpO2:",int(spo2),"%")
 print("Heart rate:", int(high_peak(np.mean(frameFps),len(hr),hr,40,180)),"bpm")
 print("Breath rate: ",int(high_peak(np.mean(frameFps),len(br),br,10,40)))
 
