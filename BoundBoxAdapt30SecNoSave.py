@@ -259,7 +259,7 @@ sm.plotHearthBreathSignals(heartRateSignal, breathSignal)
 print("=====================================================================================================================")
 # Oxygen Saturation value computation
 oxygenSaturation = sm.oxygen_saturation(meanBlueROIs, meanRedROIs)
-print("Oxygen Saturation of the Individual: %d" % oxygenSaturation)
+print("Oxygen Saturation of the Individual (Sp02): %d%%" % oxygenSaturation)
 
 # Hearth rate computation
 heartRate = sm.high_peak(meanFps, len(heartRateSignal), heartRateSignal, 50, 180)
@@ -268,4 +268,4 @@ print("Hearth Rate of the Individual: %d bpm" % heartRate)
 # Breath rate computation
 breathRate = sm.high_peak(meanFps, len(breathSignal), breathSignal, 10, 40)
 print("Breath Rate of the Individual: %d" % breathRate)
-print("=====================================================================================================================\n")
+print("=====================================================================================================================")
