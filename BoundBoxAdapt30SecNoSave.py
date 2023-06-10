@@ -267,5 +267,5 @@ print("Hearth Rate of the Individual: %d bpm" % heartRate)
 
 # Breath rate computation
 breathRate = sm.high_peak(meanFps, len(breathSignal), breathSignal, 10, 40)
-print("Breath Rate of the Individual: %d" % breathRate)
+print("Breath Rate of the Individual: %d bpm" % breathRate)
 print("=====================================================================================================================")
