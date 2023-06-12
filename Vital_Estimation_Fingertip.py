@@ -26,7 +26,7 @@ start_time = time.time()
 
 # Since we want to have 30 frames per 10 seconds, here we define a constant to use in order to stop
 # the process as soon as we reach 30 frames depending on how long we want the video to be
-videoDuration = 10
+videoDuration = 30
 MAX_FRAMES = 3 * videoDuration
 
 # List of fingertips images
@@ -237,6 +237,8 @@ meanBlueROIs = sm.meanComputation(blueROIs)
 # We named this list rawrPPGSignals since its values, by definition, should be the mean of each greenROI
 # and thats exactly what we do with the method sm.meanComputation
 rawrPPGSignals = sm.meanComputation(greenROIs)
+
+sm.plotRGBchannels(meanRedROIs, rawrPPGSignals, meanBlueROIs, "ROIs RGB Channels Means")
 
 print("""
     %d means for the red channel computed!
