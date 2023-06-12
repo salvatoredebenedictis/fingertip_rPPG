@@ -45,17 +45,17 @@ The script will output the following information:
 ## Plot examples
 
 ### 1. MediaPipe's Hand Landmarks
-<img width="1073" alt="hand-landmarks-mediapipe" src="https://github.com/justivanr/fingertip_rPPG/assets/83827643/c8330501-2a2a-4ae8-be5e-86817fc920ce">
+![alt text](https://github.com/justivanr/fingertip_rPPG/images/hand-landmarks-mediapipe.png?raw=true)
 
 #### 1.1 How it works using our system
-![handLandmarksExample](https://github.com/justivanr/fingertip_rPPG/assets/83827643/c68f79d1-3885-49e4-bf9e-25ee7f49006a)
+![alt text](https://github.com/justivanr/fingertip_rPPG/images/handLandmarksExample.jpg?raw=true)
 
 ### 2. RGB Channels before being Processed
-![exampleRGBGraph](https://github.com/justivanr/fingertip_rPPG/assets/83827643/c5fc2b9e-e15c-45fe-86b0-e14ca480a2fd)
+![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleRGBGraph.png?raw=true)
 
 ### 3. ROIs RGB Channels Means (after being Processed)
-![exampleROIRGBMeans](https://github.com/justivanr/fingertip_rPPG/assets/83827643/c880e8ff-30ea-4447-8743-902401df7b37)
+![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleROIRGBMeans.png?raw=true)
 
 ### 4. Heart and Breath Rate Signals
-![exampleHRBRsignals](https://github.com/justivanr/fingertip_rPPG/assets/83827643/0fa1b8b5-7357-428b-981a-a265c42b7196)
+![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleHRBRsignals.png?raw=true)
 
