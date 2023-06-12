@@ -45,17 +45,17 @@ The script will output the following information:
 ## Plot examples
 
 ### 1. MediaPipe's Hand Landmarks
-![alt text](https://github.com/justivanr/fingertip_rPPG/images/hand-landmarks-mediapipe.png?raw=true)
+![plot](./images/hand-landmarks-mediapipe.png?raw=true)
 
 #### 1.1 How it works using our system
-![alt text](https://github.com/justivanr/fingertip_rPPG/images/handLandmarksExample.jpg?raw=true)
+![plot](./images/handLandmarksExample.jpg?raw=true)
 
 ### 2. RGB Channels before being Processed
-![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleRGBGraph.png?raw=true)
+![plot](./images/exampleRGBGraph.png?raw=true)
 
 ### 3. ROIs RGB Channels Means (after being Processed)
-![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleROIRGBMeans.png?raw=true)
+![plot](./images/exampleROIRGBMeans.png?raw=true)
 
 ### 4. Heart and Breath Rate Signals
-![alt text](https://github.com/justivanr/fingertip_rPPG/images/exampleHRBRsignals.png?raw=true)
+![plot](./images/exampleHRBRsignals.png?raw=true)
 
