@@ -204,5 +204,4 @@ def high_peak(Fs, n, component, low, high):
     idx2 = np.argmax(fft)
     bpm = freqs[idx2]
     idx += (1,)
-
     return bpm
